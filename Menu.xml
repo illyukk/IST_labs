@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?xml-stylesheet type="text/xsl" href="style.xsl"?>
+<menu>
+  <dish>
+    <title>Чикен Премьер</title>
+    <cooktime>5 минут</cooktime>
+    <weight>234 грамм</weight>
+    <energy>525 Ккал</energy>
+    <image>https://vkusnoitochka.ru/resize/202x202/upload/iblock/92f/i0wum37qb4l8hrcv40l76fu1kfo5j7hh/large.png</image>
+    <composition>
+      <ingredient amount="2" unit="штука">Булочка с кунжутом</ingredient>
+      <ingredient amount="1" unit="штука">Куриная котлета</ingredient>
+      <ingredient amount="15" unit="грамм">Сыр Чеддер</ingredient>
+      <ingredient amount="0.5" unit="штука">Помидор</ingredient>
+      <ingredient amount="15" unit="грамм">Салат Айсберг</ingredient>
+      <ingredient amount="10" unit="грамм">Бекон</ingredient>
+      <ingredient amount="2" unit="ложка">Особый соус</ingredient>
+      <ingredient amount="2" unit="ложка">Кетчуп</ingredient>
+    </composition>
+  </dish>
+
+  <dish>
+    <title>Сырные Кольца Моцарелла</title>
+    <cooktime>6 минут</cooktime>
+    <weight>81 грамм</weight>
+    <energy>226 Ккал</energy>
+    <image>https://vkusnoitochka.ru/resize/202x202/upload/iblock/2e5/vw3ug492y1vypc7dpsozk4loxnr9lyld/large.png</image>
+    <composition>
+      <ingredient amount="100" unit="грамм">Сыр Моцарелла</ingredient>
+      <ingredient amount="0.5" unit="стакан">Панировочные сухари</ingredient>
+    </composition>
+  </dish>
+
+  <dish>
+    <title>Липтон Зелёный</title>
+    <cooktime>1 минута</cooktime>
+    <weight>500 грамм</weight>
+    <energy>134 Ккал</energy>
+    <image>https://vkusnoitochka.ru/resize/202x202/upload/iblock/eea/nw8rikw6hadhtbk8fz49u5ebfscvllet/large.png</image>
+    <composition>
+      <ingredient amount="0.5" unit="литров">Липтон</ingredient>
+    </composition>
+  </dish>
+
+  <dish>
+    <title>Биг Хит</title>
+    <cooktime>10 минут</cooktime>
+    <weight>228 грамм</weight>
+    <energy>524 Ккал</energy>
+    <image>https://vkusnoitochka.ru/resize/202x202/upload/iblock/dad/appx4s96by6vwqk12jv9hojiqbmwgbvg/large.png</image>
+    <composition>
+      <ingredient amount="2" unit="штука">Булочка с кунжутом</ingredient>
+      <ingredient amount="2" unit="штука">Котлета</ingredient>
+      <ingredient amount="10" unit="грамм">Лук</ingredient>
+      <ingredient amount="2" unit="ложка">Особый соус</ingredient>
+      <ingredient amount="50" unit="грамм">Сыр Чеддер</ingredient>
+      <ingredient amount="15" unit="грамм">Салат Айсберг</ingredient>
+      <ingredient amount="0.25" unit="штука">Маринованный огурец</ingredient>
+    </composition>
+  </dish>
+</menu>
