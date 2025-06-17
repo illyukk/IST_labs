@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Гороскоп на каждый день</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel&family=Open+Sans&display=swap" rel="stylesheet">
+    <style>
+      /* Базовые стили для страницы */
+      body {
+        margin: 0;
+        padding: 0;
+        font-family: 'Open Sans', sans-serif;
+        background: linear-gradient(135deg, #c9d6ff, #e2e2e2);
+        color: #333;
+      }
+      
+      /* Центрированный контейнер */
+      .container {
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 10px;
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+        max-width: 600px;
+        margin: 50px auto;
+        padding: 40px;
+      }
+      
+      /* Заголовки */
+      h1 {
+        font-family: 'Cinzel', serif;
+        text-align: center;
+        font-size: 36px;
+        margin-bottom: 20px;
+        color: #333;
+      }
+      
+      h2 {
+        font-size: 24px;
+        margin-bottom: 15px;
+        border-bottom: 2px solid #ddd;
+        padding-bottom: 10px;
+        color: #666;
+      }
+      
+      /* Стили для блока с сообщениями */
+      #lastMessage {
+        background: #fafafa;
+        border: 1px solid #eee;
+        padding: 20px;
+        border-radius: 8px;
+        font-size: 18px;
+        line-height: 1.6;
+        margin-top: 20px;
+        text-align: center;
+      }
+      
+      /* Стили для информации о пользователе */
+      #userInfo {
+        display: flex;
+        align-items: center;
+        margin-bottom: 20px;
+      }
+      
+      #userInfo img {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        margin-right: 10px;
+        display: none;
+      }
+      
+      #userInfo span {
+        font-size: 18px;
+        font-weight: bold;
+      }
+      
+      /* Стили для ввода и кнопки */
+      #send {
+        margin-top: 30px;
+      }
+      
+      input[type="text"] {
+        width: calc(100% - 140px);
+        padding: 14px;
+        font-size: 18px;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        background: #fff;
+        color: #333;
+      }
+      
+      input[type="text"]::placeholder {
+        color: #aaa;
+      }
+      
+      button {
+        padding: 14px 30px;
+        font-size: 18px;
+        background-color: #4CAF50;
+        color: #fff;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+        margin-left: 10px;
+      }
+      
+      button:hover {
+        background-color: #45a049;
+      }
+      
+      /* Отзывчивость для мобильных устройств */
+      @media (max-width: 480px) {
+        input[type="text"] {
+          width: 100%;
+          margin-bottom: 10px;
+        }
+        button {
+          width: 100%;
+          margin-left: 0;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Гороскоп Telegram Бот</h1>
+
+      <!-- Блок с информацией о пользователе -->
+      <div id="userInfo">
+        <img id="userPhoto" src="" alt="User Photo">
+        <span id="userName"></span>
+      </div>
+
+      <div id="updates">
+        <h2>Последнее сообщение</h2>
+        <div id="lastMessage">Загрузка обновлений...</div>
+      </div>
+      
+      <div id="send">
+        <h2>Отправить сообщение</h2>
+        <input type="text" id="messageInput" placeholder="Введите текст сообщения" />
+        <button id="sendButton">Отправить</button>
+      </div>
+    </div>
+
+    <!-- Подключаем файл с гороскопами -->
+    <script src="horoscopes.js"></script>
+    <script>
+      const token = "8169042976:AAGhhrGM-gAxPFXBEWlZnv3O4g9WXyI-Bds"; 
+      const baseUrl = `https://api.telegram.org/bot${token}/`;
+      // Считываем последний update_id из localStorage или 0, если нет
+      let lastUpdateId = parseInt(localStorage.getItem('myLastUpdateId') || '0', 10);
+
+      // Функция для определения знака зодиака по дате рождения
+      function getZodiacSign(dateString) {
+        const [dayStr, monthStr] = dateString.split(".");
+        const day = parseInt(dayStr, 10);
+        const month = parseInt(monthStr, 10);
+      
+        if ((month === 1 && day >= 20) || (month === 2 && day <= 18)) return "Водолей";
+        if ((month === 2 && day >= 19) || (month === 3 && day <= 20)) return "Рыбы";
+        if ((month === 3 && day >= 21) || (month === 4 && day <= 19)) return "Овен";
+        if ((month === 4 && day >= 20) || (month === 5 && day <= 20)) return "Телец";
+        if ((month === 5 && day >= 21) || (month === 6 && day <= 20)) return "Близнецы";
+        if ((month === 6 && day >= 21) || (month === 7 && day <= 22)) return "Рак";
+        if ((month === 7 && day >= 23) || (month === 8 && day <= 22)) return "Лев";
+        if ((month === 8 && day >= 23) || (month === 9 && day <= 22)) return "Дева";
+        if ((month === 9 && day >= 23) || (month === 10 && day <= 22)) return "Весы";
+        if ((month === 10 && day >= 23) || (month === 11 && day <= 21)) return "Скорпион";
+        if ((month === 11 && day >= 22) || (month === 12 && day <= 21)) return "Стрелец";
+        if ((month === 12 && day >= 22) || (month === 1 && day <= 19)) return "Козерог";
+        return null;
+      }
+      
+      // Функция для проверки формата даты (ДД.ММ.ГГГГ)
+      function isValidDateFormat(dateString) {
+        const regex = /^(0[1-9]|[12]\d|3[01])\.(0[1-9]|1[0-2])\.\d{4}$/;
+        return regex.test(dateString);
+      }
+      
+      // Функция для отправки сообщения через Telegram API
+      async function sendMessage(chatId, messageText) {
+        const sendUrl = `${baseUrl}sendMessage?chat_id=${chatId}&parse_mode=Markdown&text=${encodeURIComponent(messageText)}`;
+        try {
+          const response = await fetch(sendUrl);
+          const data = await response.json();
+          console.log("Отправлено сообщение:", data);
+        } catch (error) {
+          console.error("Ошибка при отправке сообщения:", error);
+        }
+      }
+      
+      // Функция для получения фото профиля пользователя
+      async function getUserProfilePhoto(userId) {
+        const getUserProfileUrl = `${baseUrl}getUserProfilePhotos?user_id=${userId}&limit=1`;
+        try {
+          const response = await fetch(getUserProfileUrl);
+          const data = await response.json();
+          if (data.result.total_count > 0) {
+            const fileId = data.result.photos[0][0].file_id;
+            const getFileUrl = `${baseUrl}getFile?file_id=${fileId}`;
+            const fileResponse = await fetch(getFileUrl);
+            const fileData = await fileResponse.json();
+            return `https://api.telegram.org/file/bot${token}/${fileData.result.file_path}`;
+          } else {
+            // Если фотографий нет, можно вернуть путь к изображению-заглушке
+            return 'default-image.png';
+          }
+        } catch (e) {
+          console.error("Ошибка получения фото пользователя", e);
+          return 'default-image.png';
+        }
+      }
+      
+      // Основная функция для получения обновлений через polling (рекурсивный вызов)
+      async function pollUpdates() {
+        let url = `${baseUrl}getUpdates?timeout=0`;
+        if (lastUpdateId) {
+          url += `&offset=${lastUpdateId}`;
+        }
+        try {
+          const response = await fetch(url);
+          const data = await response.json();
+          console.log("Новые обновления:", data);
+    
+          if (data.result && data.result.length > 0) {
+            data.result.forEach(update => {
+              lastUpdateId = update.update_id + 1;
+              localStorage.setItem('myLastUpdateId', lastUpdateId);
+    
+              const message = update.message;
+              if (message && message.text) {
+                const chatId = message.chat.id;
+                const text = message.text.trim();
+                document.getElementById("lastMessage").textContent =
+                  "Получено сообщение: " + text + " (Chat ID: " + chatId + ")";
+                window.chatId = chatId;
+    
+                // Обновляем информацию о пользователе
+                const user = message.from;
+                if (user) {
+                  const displayName = user.username || (user.first_name + (user.last_name ? ' ' + user.last_name : ''));
+                  document.getElementById("userName").textContent = displayName;
+                  getUserProfilePhoto(user.id).then(photoUrl => {
+                    const userPhotoElement = document.getElementById("userPhoto");
+                    userPhotoElement.src = photoUrl;
+                    userPhotoElement.style.display = 'block';
+                  });
+                }
+    
+                // Обработка команд и даты рождения
+                if (text === "/start") {
+                  sendMessage(chatId, "Привет! Скажи, пожалуйста, свою дату рождения в формате *ДД.ММ.ГГГГ*");
+                } else if (text.toLowerCase() === "привет") {
+                  sendMessage(chatId, "Привет! Введите дату рождения в формате *ДД.ММ.ГГГГ*, чтобы получить гороскоп.");
+                } else if (isValidDateFormat(text)) {
+                  const zodiac = getZodiacSign(text);
+                  if (zodiac) {
+                    const horoscope = horoscopes[zodiac] || "Гороскоп для вашего знака недоступен.";
+                    const formattedMessage = 
+                      `Ваша дата рождения: *${text}*\n\n` +
+                      `Ваш знак зодиака: *${zodiac}*\n\n` +
+                      `Ваш гороскоп на сегодня: "${horoscope}"`;
+                    sendMessage(chatId, formattedMessage);
+                  } else {
+                    sendMessage(chatId, "Не удалось определить знак зодиака. Проверьте дату.");
+                  }
+                } else {
+                  sendMessage(chatId, "Пожалуйста, введите дату рождения в формате *ДД.ММ.ГГГГ* или команду /start.");
+                }
+              }
+            });
+          }
+        } catch (error) {
+          console.error("Ошибка при получении обновлений:", error);
+          document.getElementById("lastMessage").textContent =
+            "Ошибка при получении обновлений.";
+        }
+        setTimeout(pollUpdates, 200);
+      }
+      
+      // Обработчик кнопки "Отправить сообщение"
+      document.getElementById("sendButton").addEventListener("click", async function () {
+        const messageText = document.getElementById("messageInput").value;
+        if (!window.chatId) {
+          alert("Не удалось определить chat_id. Попробуйте написать /start в боте или обновите страницу.");
+          return;
+        }
+        await sendMessage(window.chatId, messageText);
+      });
+      
+      // Запуск поллинга обновлений
+      pollUpdates();
+    </script>
+  </body>
+</html>
