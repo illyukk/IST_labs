@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>4 Лабораторная работа</title>
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <style>
+    /* --- Общие стили для страницы --- */
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: "Segoe UI", Tahoma, sans-serif;
+      background: linear-gradient(to bottom right, #3b5998, #192f6a);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      min-height: 100vh;
+      color: #fff;
+    }
+    .container {
+      background-color: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      border-radius: 8px;
+      width: 90%;
+      max-width: 480px;
+      padding: 30px 20px;
+      margin: 40px auto;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+      text-align: center;
+    }
+    h1, h2 {
+      margin-top: 0;
+    }
+    /* --- Стили для полей ввода одинаковые для статуса и поста --- */
+    #statusText,
+    #postText {
+      display: block;
+      width: 80%;
+      padding: 12px;
+      font-size: 16px;
+      margin: 20px auto;
+      border: 2px solid transparent;
+      border-radius: 4px;
+      outline: none;
+      color: #333;
+      background-color: rgba(255,255,255,0.7);
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+      transition: border-color 0.3s, background-color 0.3s, box-shadow 0.3s;
+    }
+    #statusText::placeholder,
+    #postText::placeholder {
+      color: #888;
+    }
+    #statusText:focus,
+    #postText:focus {
+      border-color: #2e7bd7;
+      background-color: rgba(255,255,255,0.9);
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.1), 0 0 6px rgba(46,123,215,0.5);
+    }
+    /* --- Кнопки --- */
+    button {
+      display: inline-block;
+      width: 80%;
+      padding: 12px;
+      font-size: 16px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      background-color: #2e7bd7;
+      color: #fff;
+      font-weight: 600;
+      transition: background-color 0.3s, transform 0.2s;
+    }
+    button:hover {
+      background-color: #145dad;
+      transform: translateY(-1px);
+    }
+    button:active {
+      transform: translateY(0);
+    }
+    /* --- Блоки с результатами --- */
+    p {
+      margin-top: 20px;
+      font-weight: bold;
+    }
+    /* --- Адаптивность --- */
+    @media screen and (max-width: 480px) {
+      .container {
+        margin-top: 20px;
+        width: 90%;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Работа с VK API через Implicit Flow</h1>
+
+  <!-- Форма для публикации поста -->
+  <h2>Публикация поста</h2>
+  <input type="text" id="postText" placeholder="Введите текст поста">
+  <button onclick="postWall()">Опубликовать пост (только для друзей)</button>
+  <p id="postResult"></p>
+
+  <!-- Форма для изменения статуса -->
+  <h2>Изменение статуса</h2>
+  <input type="text" id="statusText" placeholder="Введите новый статус">
+  <button onclick="setStatus()">Изменить статус</button>
+  <p id="statusResult"></p>
+
+  <script>
+    // Вставьте сюда свой access_token (с правами wall, status, offline)
+    const accessToken = "vk1.a.toVEEOSigVVa-nUVnVOCulD1oxQCAuXTya4JoVyL3PN6ac5DkkjXu8xH9sQ4OxKuOGrvWCdI6x-B-MD8Z-NduiXM2nGTXk_m2vwtBvXt6N5LCzlCXOz_xHSuW2uTYbXY_7m7M2-wuId2j_GuSd8XG-M921sKF02zyAmAiL21vlOG_zijEim0EeLfxIbjSizo4Njtq5l0IkVskKt-mLO7_A";
+    const apiVersion = "5.131";
+
+    // Функция для публикации поста на стене (видимость только для друзей)
+    function postWall() {
+      const postText = document.getElementById("postText").value;
+      if (!postText) {
+        document.getElementById("postResult").innerText = "⚠ Введите текст поста.";
+        return;
+      }
+      $.ajax({
+        url: "https://api.vk.com/method/wall.post",
+        data: {
+          access_token: accessToken,
+          message: postText,
+          friends_only: 1,
+          v: apiVersion
+        },
+        dataType: "jsonp",
+        success: function(response) {
+          if (response.response) {
+            document.getElementById("postResult").innerText = "✅ Пост успешно опубликован!";
+          } else {
+            document.getElementById("postResult").innerText = "❌ Ошибка: " + JSON.stringify(response);
+          }
+        },
+        error: function() {
+          document.getElementById("postResult").innerText = "❌ Ошибка при выполнении запроса.";
+        }
+      });
+    }
+
+    // Функция для изменения статуса страницы
+    function setStatus() {
+      const statusText = document.getElementById("statusText").value;
+      if (!statusText) {
+        document.getElementById("statusResult").innerText = "⚠ Введите статус.";
+        return;
+      }
+      $.ajax({
+        url: "https://api.vk.com/method/status.set",
+        data: {
+          access_token: accessToken,
+          text: statusText,
+          v: apiVersion
+        },
+        dataType: "jsonp",
+        success: function(response) {
+          if (response.response === 1) {
+            document.getElementById("statusResult").innerText = "✅ Статус успешно обновлён!";
+          } else {
+            document.getElementById("statusResult").innerText = "❌ Ошибка: " + JSON.stringify(response);
+          }
+        },
+        error: function() {
+          document.getElementById("statusResult").innerText = "❌ Ошибка при выполнении запроса.";
+        }
+      });
+    }
+  </script>
+
+</body>
+</html>
