@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Друзья Иллюк Юлии</title>
+    <script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
+    <style>
+        /* Новый дизайн страницы */
+        body {
+            background-color: #e6e6fa; /* светло-лавандовый фон */
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        header {
+            background-color: #6a5acd; /* темно-синий оттенок */
+            color: white;
+            text-align: center;
+            padding: 20px 0;
+        }
+        h1 {
+            margin: 0;
+            font-size: 2.5em;
+        }
+        .container {
+            padding: 20px;
+            text-align: center;
+        }
+        button {
+            margin: 10px;
+            padding: 10px 20px;
+            background-color: #6a5acd;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-size: 1em;
+        }
+        button:hover {
+            background-color: #5a4cb3;
+        }
+        #searchInput {
+            margin: 10px;
+            padding: 8px;
+            width: 300px;
+            font-size: 1em;
+        }
+        #friendsTable {
+            width: 90%;
+            margin: 20px auto;
+            border-collapse: collapse;
+            background: white;
+        }
+        #friendsTable th, #friendsTable td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: center;
+        }
+        /* Заголовки сортируемых столбцов */
+        #friendsTable th[data-column] {
+            background-color: #6a5acd;
+            color: white;
+            cursor: pointer;
+        }
+        /* Стили для стрелок сортировки */
+        .asc:after {
+            content: " \2191";
+        }
+        .desc:after {
+            content: " \2193";
+        }
+        /* Hover эффект для строк таблицы */
+        #friendsTable tbody tr:hover {
+            background-color: #f0f0ff;
+            transition: background-color 0.3s ease;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Друзья Иллюк Юлии</h1>
+    </header>
+    <div class="container">
+        <button onclick="getFriends()">Загрузить друзей</button>
+        <button id="saveJSONBtn" onclick="saveJSON()" disabled>Сохранить JSON</button>
+        <br>
+        <input type="text" id="searchInput" placeholder="Поиск по имени и фамилии">
+        <table id="friendsTable">
+            <thead>
+                <tr>
+                    <th>Аватар</th>
+                    <th data-column="id">ID</th>
+                    <th data-column="first_name">Имя</th>
+                    <th data-column="last_name">Фамилия</th>
+                    <th>День рождения</th>
+                    <th data-column="city">Город</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+    
+    <script>
+        // Глобальная переменная для сохранения JSON-данных
+        var globalJSON = null;
+        
+        // Функция универсальной сортировки по конкретному столбцу
+        function sortColumn(table, colIndex, asc, isNumeric) {
+            var tbody = table.find('tbody');
+            var rows = tbody.find('tr').get();
+            rows.sort(function(a, b) {
+                var A = $(a).children('td').eq(colIndex).text().trim();
+                var B = $(b).children('td').eq(colIndex).text().trim();
+                if (isNumeric) {
+                    A = parseFloat(A) || 0;
+                    B = parseFloat(B) || 0;
+                } else {
+                    A = A.toUpperCase();
+                    B = B.toUpperCase();
+                }
+                if (asc) {
+                    return (A > B) ? 1 : (A < B) ? -1 : 0;
+                } else {
+                    return (A < B) ? 1 : (A > B) ? -1 : 0;
+                }
+            });
+            $.each(rows, function(index, row) {
+                tbody.append(row);
+            });
+        }
+        
+        // Функция композитной сортировки по имени и фамилии
+        function compositeSort(table, asc) {
+            var tbody = table.find('tbody');
+            var rows = tbody.find('tr').get();
+            rows.sort(function(a, b) {
+                var nameA = $(a).children('td').eq(2).text().toUpperCase();
+                var nameB = $(b).children('td').eq(2).text().toUpperCase();
+                if (nameA === nameB) {
+                    var lastA = $(a).children('td').eq(3).text().toUpperCase();
+                    var lastB = $(b).children('td').eq(3).text().toUpperCase();
+                    return asc 
+                        ? (lastA > lastB ? 1 : lastA < lastB ? -1 : 0)
+                        : (lastA < lastB ? 1 : lastA > lastB ? -1 : 0);
+                } else {
+                    return asc 
+                        ? (nameA > nameB ? 1 : nameA < nameB ? -1 : 0)
+                        : (nameA < nameB ? 1 : nameA > nameB ? -1 : 0);
+                }
+            });
+            $.each(rows, function(index, row) {
+                tbody.append(row);
+            });
+        }
+        
+        // Функция для загрузки друзей из VK API
+        function getFriends() {
+            // Вставьте сюда ваш корректный пользовательский токен с правом friends
+            var accessToken = "vk1.a.hUYRAuXA8Dg7Xh2Q06QpNRg6sJdD-3j_EY4ORY50mxYmvFoPl_XXgSnHyhjzRecUGTKhzpZQSF19ynZUAKadXxHpoAtgpm5pvQIXp6usMJMOEN-opLmu9ehsPgzRc0XRjKOWvtn9m93N2gC613IHpbZP5lCixGy5pgqc0gLvktUA9pyvf13P4pstfvWLUpPc";
+            
+            $.ajax({
+                url: "https://api.vk.com/method/friends.get",
+                data: {
+                    access_token: accessToken,
+                    v: "5.131",
+                    fields: "photo_100,bdate,city,first_name,last_name"
+                },
+                dataType: "jsonp",
+                success: function(data) {
+                    if (data.response) {
+                        // Сохраняем полученный JSON для дальнейшего сохранения в файл
+                        globalJSON = data.response;
+                        // Активируем кнопку сохранения JSON
+                        $("#saveJSONBtn").prop("disabled", false);
+                        
+                        var friends = data.response.items;
+                        var tableBody = $("#friendsTable tbody");
+                        tableBody.empty();
+                        
+                        friends.forEach(function(friend) {
+                            var city = (friend.city) ? friend.city.title : "Не указан";
+                            var bdate = (friend.bdate) ? friend.bdate : "Не указан";
+                            var avatar = (friend.photo_100) ? friend.photo_100 : "https://vk.com/images/camera_100.png";
+                            
+                            var row = `<tr>
+                                <td><img src="${avatar}" width="50" alt="Avatar"></td>
+                                <td>${friend.id}</td>
+                                <td>${friend.first_name}</td>
+                                <td>${friend.last_name}</td>
+                                <td>${bdate}</td>
+                                <td>${city}</td>
+                            </tr>`;
+                            tableBody.append(row);
+                        });
+                    } else {
+                        alert("Ошибка: " + JSON.stringify(data));
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.log("Ошибка AJAX запроса:", status, error);
+                }
+            });
+        }
+        
+        // Функция сохранения JSON в файл
+        function saveJSON() {
+            if (globalJSON) {
+                var jsonStr = JSON.stringify(globalJSON, null, 4);
+                var blob = new Blob([jsonStr], { type: "application/json" });
+                var url = URL.createObjectURL(blob);
+                var a = document.createElement("a");
+                a.href = url;
+                a.download = "friends.json";
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            } else {
+                alert("Данные не загружены!");
+            }
+        }
+        
+        // Функция фильтрации друзей по имени и фамилии
+        function filterFriends() {
+            var filter = $("#searchInput").val().toLowerCase();
+            $("#friendsTable tbody tr").each(function() {
+                var firstName = $(this).find("td").eq(2).text().toLowerCase();
+                var lastName = $(this).find("td").eq(3).text().toLowerCase();
+                var fullName = firstName + " " + lastName;
+                if (firstName.indexOf(filter) > -1 || lastName.indexOf(filter) > -1 || fullName.indexOf(filter) > -1) {
+                    $(this).show();
+                } else {
+                    $(this).hide();
+                }
+            });
+        }
+        
+        // Обработка кликов для сортировки по столбцам
+        $(document).ready(function(){
+            $("#friendsTable th[data-column]").on("click", function(){
+                var th = $(this);
+                var table = th.closest("table");
+                var colName = th.data("column");
+                var colIndex = th.index();
+                var asc = !th.hasClass("asc");
+                
+                // Сбрасываем классы сортировки у всех сортируемых заголовков
+                table.find("th[data-column]").removeClass("asc desc");
+                th.addClass(asc ? "asc" : "desc");
+                
+                if(colName === "first_name" || colName === "last_name") {
+                    // Устанавливаем одинаковый класс для обоих заголовков "Имя" и "Фамилия"
+                    table.find("th[data-column='first_name'], th[data-column='last_name']")
+                         .removeClass("asc desc")
+                         .addClass(asc ? "asc" : "desc");
+                    compositeSort(table, asc);
+                } else if(colName === "id") {
+                    sortColumn(table, colIndex, asc, true);
+                } else if(colName === "city") {
+                    sortColumn(table, colIndex, asc, false);
+                } else {
+                    sortColumn(table, colIndex, asc, false);
+                }
+            });
+            
+            // Обработка ввода в поле поиска
+            $("#searchInput").on("keyup", filterFriends);
+        });
+    </script>
+</body>
+</html>
