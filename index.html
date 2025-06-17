@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Меню</title>
+    <link rel="stylesheet" type="text/css" href="style.css">
+</head>
+<body>
+
+    <div class="controls-container">
+        <div class="search-container">
+            <label for="search">Поиск по названию:</label>
+            <input type="text" id="search" oninput="applySearch()" placeholder="Введите название блюда...">
+        </div>
+        
+        <div class="sort-container">
+            <label for="sort">Выберите сортировку:</label>
+            <select id="sort">
+                <option value="energy">По калорийности</option>
+                <option value="cooktime">По времени приготовления</option>
+                <option value="weight">По весу</option>
+            </select>
+            <button onclick="applySort()">Показать</button>
+        </div>
+    </div>
+
+    <div id="dish-details"></div>
+
+    <div class="pagination">
+        <button id="prevPage" onclick="changePage(-1)">← Предыдущая</button>
+        <span id="pageNumber">Страница 1</span>
+        <button id="nextPage" onclick="changePage(1)">Следующая →</button>
+    </div>
+
+    <script type="text/javascript">
+        let dishes = [];
+        let filteredDishes = [];
+        let xsltProcessor = new XSLTProcessor();
+        let xslDoc;
+        let currentPage = 1;
+        const itemsPerPage = 2;
+
+        function loadXMLAndXSL() {
+            let xhttp = new XMLHttpRequest();
+            xhttp.open("GET", "Menu.xml", true);
+            xhttp.onreadystatechange = function() {
+                if (this.readyState == 4 && this.status == 200) {
+                    let xml = this.responseXML;
+                    loadXSL(xml);
+                }
+            };
+            xhttp.send();
+        }
+
+        function loadXSL(xml) {
+            let xslHttp = new XMLHttpRequest();
+            xslHttp.open("GET", "style.xsl", true);
+            xslHttp.onreadystatechange = function() {
+                if (this.readyState == 4 && this.status === 200) {
+                    xslDoc = this.responseXML;
+                    xsltProcessor.importStylesheet(xslDoc);
+                    processXML(xml);
+                }
+            };
+            xslHttp.send();
+        }
+
+        function processXML(xml) {
+            let dishNodes = xml.getElementsByTagName("dish");
+            dishes = [];
+
+            for (let i = 0; i < dishNodes.length; i++) {
+                let dish = dishNodes[i];
+                let title = dish.getElementsByTagName("title")[0].textContent;
+                let cooktime = parseInt(dish.getElementsByTagName("cooktime")[0].textContent);
+                let weight = parseInt(dish.getElementsByTagName("weight")[0].textContent);
+                let energy = parseInt(dish.getElementsByTagName("energy")[0].textContent);
+                
+                dishes.push({ title, cooktime, weight, energy, node: dish });
+            }
+
+            filteredDishes = [...dishes]; // Создаем копию списка для фильтрации
+            displayDishes();
+        }
+
+        function displayDishes() {
+            let sortedXml = document.implementation.createDocument("", "", null);
+            let menu = sortedXml.createElement("menu");
+
+            let start = (currentPage - 1) * itemsPerPage;
+            let end = start + itemsPerPage;
+            let paginatedDishes = filteredDishes.slice(start, end);
+
+            paginatedDishes.forEach(dish => menu.appendChild(dish.node));
+            sortedXml.appendChild(menu);
+
+            let transformed = xsltProcessor.transformToFragment(sortedXml, document);
+            let container = document.getElementById("dish-details");
+            container.innerHTML = "";
+            container.appendChild(transformed);
+
+            updatePaginationButtons();
+        }
+
+        function changePage(direction) {
+            currentPage += direction;
+            displayDishes();
+        }
+
+        function updatePaginationButtons() {
+            document.getElementById("pageNumber").textContent = `Страница ${currentPage}`;
+            document.getElementById("prevPage").style.display = (currentPage === 1) ? "none" : "inline-block";
+            document.getElementById("nextPage").style.display = (currentPage * itemsPerPage >= filteredDishes.length) ? "none" : "inline-block";
+        }
+
+        function applySort() {
+            let criteria = document.getElementById("sort").value;
+            filteredDishes.sort((a, b) => a[criteria] - b[criteria]);
+            currentPage = 1; // Сбросить на первую страницу после сортировки
+            displayDishes();
+        }
+
+        function applySearch() {
+            let query = document.getElementById("search").value.toLowerCase();
+            filteredDishes = dishes.filter(dish => dish.title.toLowerCase().includes(query));
+            currentPage = 1; // Сбросить на первую страницу после поиска
+            displayDishes();
+        }
+
+        window.onload = loadXMLAndXSL;
+    </script>
+
+</body>
+</html>
