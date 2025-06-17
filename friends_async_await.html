@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Лабораторная работа 6. Работа с API ВКонтакте (async/await)</title>
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: "Segoe UI", Tahoma, sans-serif;
+      background: linear-gradient(to bottom right, #3b5998, #192f6a);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      min-height: 100vh;
+      color: #fff;
+    }
+    .container {
+      background-color: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      border-radius: 8px;
+      width: 90%;
+      max-width: 480px;
+      padding: 30px 20px;
+      margin: 40px auto;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+      text-align: center;
+    }
+    h1 {
+      margin-top: 0;
+    }
+    input[type="text"] {
+      display: block;
+      width: 80%;
+      padding: 12px;
+      font-size: 16px;
+      margin: 20px auto;
+      border: 2px solid transparent;
+      border-radius: 4px;
+      outline: none;
+      color: #333;
+      background-color: rgba(255,255,255,0.7);
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+      transition: border-color 0.3s, background-color 0.3s, box-shadow 0.3s;
+    }
+    input[type="text"]::placeholder {
+      color: #888;
+    }
+    input[type="text"]:focus {
+      border-color: #2e7bd7;
+      background-color: rgba(255,255,255,0.9);
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.1), 0 0 6px rgba(46,123,215,0.5);
+    }
+    button {
+      display: inline-block;
+      width: 80%;
+      padding: 12px;
+      font-size: 16px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      background-color: #2e7bd7;
+      color: #fff;
+      font-weight: 600;
+      transition: background-color 0.3s, transform 0.2s;
+    }
+    button:hover {
+      background-color: #145dad;
+      transform: translateY(-1px);
+    }
+    button:active {
+      transform: translateY(0);
+    }
+    .result {
+      margin: 20px auto;
+      text-align: left;
+      padding: 10px;
+      background-color: rgba(255, 255, 255, 0.2);
+      border-radius: 6px;
+      width: 80%;
+      word-wrap: break-word;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Поиск аккаунта среди друзей моих друзей, у которого максимальное количество друзей (async/await)</h1>
+
+    <!-- Поле для задания лимита -->
+    <input type="text" id="limit" placeholder="Ограничение (например, 10)">
+    
+    <button onclick="findFriendOfFriends()">Проанализировать</button>
+
+    <div id="results" class="result"></div>
+  </div>
+
+  <script>
+    // ВАШИ ПАРАМЕТРЫ VK
+    const accessToken = "vk1.a.Lp9rcNQYZK3fmRO8JQf6Wl9B-BAx3-hNkwBEMFt5AIh97lH9j382c83ll6weCgdNdi8Fw8vK8gDQQj2LtoO4VkgbU9aorfHUbI9OI4oyflx75rclquWzEODLXW0mmcw0NfEn3BDoePlMwP6YE0g4k4732dh2Qsgvj8i5chKtN6uKoNpLzXQCqlzja8HwmRe8Z8ibELip10KVm-FrxXy3Dw"; // <-- Вставьте ваш access_token
+    const apiVersion = "5.131";
+
+    // Задержка между запросами (ms):
+    const REQUEST_DELAY = 400; 
+
+    /**
+     * Обёртка над $.ajax с .promise(), чтобы можно было вызывать через await.
+     * @param {Object} params — объект с настройками для запроса.
+     * @returns {Promise} Promise с результатом JSONP-запроса.
+     */
+    function vkApiCall(params) {
+      return $.ajax(params).promise();
+    }
+
+    /**
+     * Функция, которая запускается при нажатии на кнопку
+     * и ищет среди "друзей моих друзей" аккаунт с макс. числом друзей.
+     */
+    async function findFriendOfFriends() {
+      try {
+        // 1) Считываем лимит из поля
+        const limit = parseInt(document.getElementById("limit").value.trim()) || 10;
+        showResult("Загружаем список моих друзей ...");
+
+        // 2) Делаем запрос: список моих друзей
+        const friendsResponse = await vkApiCall({
+          url: "https://api.vk.com/method/friends.get",
+          data: {
+            count: limit,
+            access_token: accessToken,
+            v: apiVersion
+          },
+          dataType: "jsonp"
+        });
+
+        if (!friendsResponse.response) {
+          throw new Error("Ошибка при получении списка друзей: " + JSON.stringify(friendsResponse));
+        }
+        const myFriends = friendsResponse.response.items;
+        showResult(`Найдено моих друзей (ограниченно): ${myFriends.length}. Загружаем их друзей...`);
+
+        // 3) Последовательно получаем друзей для каждого моего друга
+        let allFriendsOfFriends = [];
+        for (let i = 0; i < myFriends.length; i++) {
+          const friendId = myFriends[i];
+
+          // Ждём небольшую задержку, чтобы не превысить лимиты
+          await delay(REQUEST_DELAY);
+
+          const friendResp = await vkApiCall({
+            url: "https://api.vk.com/method/friends.get",
+            data: {
+              user_id: friendId,
+              count: limit,
+              access_token: accessToken,
+              v: apiVersion
+            },
+            dataType: "jsonp"
+          });
+
+          if (friendResp.response) {
+            // Добавляем IDs друзей этого друга в общий массив
+            allFriendsOfFriends = allFriendsOfFriends.concat(friendResp.response.items);
+          }
+        }
+
+        const uniqueFriends = [...new Set(allFriendsOfFriends)];
+        showResult(`Всего найдено уникальных "друзей друзей": ${uniqueFriends.length}. Ищем самого дружелюбного ...`);
+        if (uniqueFriends.length === 0) {
+          showResult("Нет доступных 'друзей друзей' (из-за приватности или отсутствия друзей).");
+          return;
+        }
+
+        // 4) Ищем у кого max число друзей
+        let maxFriendsCount = -1;
+        let maxFriendsUser = null;
+
+        // Чтобы не проверять тысячи людей, проверяем только limit
+        const friendsToCheck = uniqueFriends.slice(0, limit);
+
+        for (let i = 0; i < friendsToCheck.length; i++) {
+          const friendId = friendsToCheck[i];
+          
+          // Ждём задержку перед следующим запросом
+          await delay(REQUEST_DELAY);
+
+          const friendResp2 = await vkApiCall({
+            url: "https://api.vk.com/method/friends.get",
+            data: {
+              user_id: friendId,
+              count: 5000,
+              access_token: accessToken,
+              v: apiVersion
+            },
+            dataType: "jsonp"
+          });
+
+          if (friendResp2.response) {
+            const friendCount = friendResp2.response.count;
+            if (friendCount > maxFriendsCount) {
+              maxFriendsCount = friendCount;
+              maxFriendsUser = friendId;
+            }
+          }
+        }
+
+        // 5) Выводим итог
+        if (!maxFriendsUser) {
+          showResult("Не удалось определить пользователя с максимальным числом друзей.");
+          return;
+        }
+
+        // Запрашиваем имя и фамилию
+        const userResp = await vkApiCall({
+          url: "https://api.vk.com/method/users.get",
+          data: {
+            user_ids: maxFriendsUser,
+            fields: "first_name,last_name",
+            access_token: accessToken,
+            v: apiVersion
+          },
+          dataType: "jsonp"
+        });
+
+        if (userResp.response && userResp.response.length > 0) {
+          const userInfo = userResp.response[0];
+          const firstName = userInfo.first_name || "";
+          const lastName  = userInfo.last_name || "";
+          showResult(`Пользователь "${firstName} ${lastName}" имеет ${maxFriendsCount} друзей`);
+        } else {
+          showResult(`Пользователь с ID ${maxFriendsUser} имеет ${maxFriendsCount} друзей (имя скрыто)`);
+        }
+      } catch (err) {
+        // В любой момент, если что-то не так, ловим ошибку тут
+        showResult("❌ Ошибка: " + err.message);
+      }
+    }
+
+    /**
+     * Небольшая утилита для задержки (await delay(500))
+     * @param {number} ms - миллисекунды
+     */
+    function delay(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    /**
+     * Вывод результатов на экран
+     * @param {string} msg - сообщение для вывода
+     */
+    function showResult(msg) {
+      document.getElementById("results").innerText = msg;
+    }
+  </script>
+</body>
+</html>
