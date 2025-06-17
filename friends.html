@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Лабораторная работа 5. Работа с API вконтакте с использованием вложенных запросов</title>
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: "Segoe UI", Tahoma, sans-serif;
+      background: linear-gradient(to bottom right, #3b5998, #192f6a);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      min-height: 100vh;
+      color: #fff;
+    }
+    .container {
+      background-color: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      border-radius: 8px;
+      width: 90%;
+      max-width: 480px;
+      padding: 30px 20px;
+      margin: 40px auto;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+      text-align: center;
+    }
+    h1 {
+      margin-top: 0;
+    }
+    input[type="text"] {
+      display: block;
+      width: 80%;
+      padding: 12px;
+      font-size: 16px;
+      margin: 20px auto;
+      border: 2px solid transparent;
+      border-radius: 4px;
+      outline: none;
+      color: #333;
+      background-color: rgba(255,255,255,0.7);
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+      transition: border-color 0.3s, background-color 0.3s, box-shadow 0.3s;
+    }
+    input[type="text"]::placeholder {
+      color: #888;
+    }
+    input[type="text"]:focus {
+      border-color: #2e7bd7;
+      background-color: rgba(255,255,255,0.9);
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.1), 0 0 6px rgba(46,123,215,0.5);
+    }
+    button {
+      display: inline-block;
+      width: 80%;
+      padding: 12px;
+      font-size: 16px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      background-color: #2e7bd7;
+      color: #fff;
+      font-weight: 600;
+      transition: background-color 0.3s, transform 0.2s;
+    }
+    button:hover {
+      background-color: #145dad;
+      transform: translateY(-1px);
+    }
+    button:active {
+      transform: translateY(0);
+    }
+    .result {
+      margin: 20px auto;
+      text-align: left;
+      padding: 10px;
+      background-color: rgba(255, 255, 255, 0.2);
+      border-radius: 6px;
+      width: 80%;
+      word-wrap: break-word;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Поиск аккаунта среди друзей моих друзей, у которого максимальное количество друзей</h1>
+
+    <!-- Поле для задания лимита -->
+    <input type="text" id="limit" placeholder="Ограничение (например, 10)">
+    
+    <button onclick="findFriendOfFriends()">Проанализировать</button>
+
+    <div id="results" class="result"></div>
+  </div>
+
+  <script>
+    const accessToken = "vk1.a.KGjKHoH9modDuJ3ummu0Tm8Y6UUSVBxm7A0vqrERLLB2VF9-CibXxdjawuALBrlUnBOjWuO1Y67nAqUps1eRUJzvna5YjqzRmCV7ZYqX8HVq9Rid3gBO3HAh583GMPMgxYsDC7ZQ2ZOfdQsQTRRIlhhf1PuwqRb8SClHSAfOxS_8OEUK-s8wbytR-gEplRBwKOgdLmK9_8a2GfAR1E7j9g";
+    const apiVersion = "5.131";
+
+    // ЗАДЕРЖКА МЕЖДУ ЗАПРОСАМИ (в мс) - здесь можно регулировать.
+    const REQUEST_DELAY = 400; 
+
+    // 1) Запускаем: находим друзей "меня".
+    function findFriendOfFriends() {
+      const limit = parseInt(document.getElementById("limit").value.trim()) || 10;
+      showResult("Загружаем список моих друзей ...");
+
+      $.ajax({
+        url: "https://api.vk.com/method/friends.get",
+        data: {
+          count: limit,
+          access_token: accessToken,
+          v: apiVersion
+        },
+        dataType: "jsonp",
+        success: function(response) {
+          if (!response.response) {
+            showResult("❌ Ошибка при получении списка друзей: " + JSON.stringify(response));
+            return;
+          }
+          const myFriends = response.response.items;
+          showResult(`Найдено моих друзей (ограниченно): ${myFriends.length}. Загружаем их друзей...`);
+          getFriendsOfMyFriendsSequential(myFriends, limit);
+        },
+        error: function() {
+          showResult("❌ Ошибка запроса friends.get");
+        }
+      });
+    }
+
+    // 2) Последовательно получаем друзей для каждого моего друга.
+    function getFriendsOfMyFriendsSequential(myFriends, limit) {
+      let index = 0;
+      let allFriendsOfFriends = [];
+
+      function processNext() {
+        if (index >= myFriends.length) {
+          // Все запросы завершены
+          processAllFriendsOfFriends(allFriendsOfFriends, limit);
+          return;
+        }
+        const friendId = myFriends[index++];
+        // Запрос friends.get для очередного друга
+        $.ajax({
+          url: "https://api.vk.com/method/friends.get",
+          data: {
+            user_id: friendId,
+            count: limit,
+            access_token: accessToken,
+            v: apiVersion
+          },
+          dataType: "jsonp",
+          success: function(resp) {
+            if (resp.response) {
+              allFriendsOfFriends = allFriendsOfFriends.concat(resp.response.items);
+            }
+          },
+          complete: function() {
+            // Пауза перед следующим запросом
+            setTimeout(processNext, REQUEST_DELAY);
+          }
+        });
+      }
+
+      if (myFriends.length === 0) {
+        // Если у вас нет друзей, сразу завершаем
+        processAllFriendsOfFriends([], limit);
+      } else {
+        processNext();
+      }
+    }
+
+    // 3) Обработка общего списка «друзей друзей».
+    function processAllFriendsOfFriends(allFriendsOfFriends, limit) {
+      const uniqueFriends = [...new Set(allFriendsOfFriends)];
+      showResult(`Всего найдено уникальных "друзей друзей": ${uniqueFriends.length}. Ищем самого дружелюбного ...`);
+
+      if (uniqueFriends.length === 0) {
+        showResult("Нет доступных 'друзей друзей' (из-за приватности или отсутствия друзей).");
+        return;
+      }
+      findUserWithMaxFriendsSequential(uniqueFriends, limit);
+    }
+
+    // 4) определяем, у кого самое большое число друзей
+    function findUserWithMaxFriendsSequential(friendsArray, limit) {
+      let maxFriendsCount = -1;
+      let maxFriendsUser = null;
+      
+      // Чтобы не проверять тысячи людей, берём только limit
+      const friendsToCheck = friendsArray.slice(0, limit);
+      let index = 0;
+
+      function processNextFriend() {
+        if (index >= friendsToCheck.length) {
+          // Закончили проверять всех
+          showFinalResult(maxFriendsUser, maxFriendsCount);
+          return;
+        }
+        const friendId = friendsToCheck[index++];
+
+        $.ajax({
+          url: "https://api.vk.com/method/friends.get",
+          data: {
+            user_id: friendId,
+            count: 5000,  
+            access_token: accessToken,
+            v: apiVersion
+          },
+          dataType: "jsonp",
+          success: function(resp) {
+            if (resp.response) {
+              const friendCount = resp.response.count;
+              if (friendCount > maxFriendsCount) {
+                maxFriendsCount = friendCount;
+                maxFriendsUser = friendId;
+              }
+            }
+          },
+          complete: function() {
+            // Пауза перед запросом к следующему кандидату
+            setTimeout(processNextFriend, REQUEST_DELAY);
+          }
+        });
+      }
+
+      if (friendsToCheck.length === 0) {
+        showFinalResult(null, 0);
+      } else {
+        processNextFriend();
+      }
+    }
+
+    // 5) вывод имя и фамилия
+    function showFinalResult(userId, count) {
+      if (!userId) {
+        showResult("Не удалось определить пользователя с максимальным числом друзей.");
+        return;
+      }
+
+      // Запрос, чтобы получить first_name/last_name
+      $.ajax({
+        url: "https://api.vk.com/method/users.get",
+        data: {
+          user_ids: userId,
+          fields: "first_name,last_name",
+          access_token: accessToken,
+          v: apiVersion
+        },
+        dataType: "jsonp",
+        success: function(resp) {
+          if (resp.response && resp.response.length > 0) {
+            const userInfo = resp.response[0];
+            const firstName = userInfo.first_name || "";
+            const lastName  = userInfo.last_name  || "";
+            showResult(`Пользователь "${firstName} ${lastName}" имеет ${count} друзей`);
+          } else {
+            showResult(`Пользователь с ID ${userId} имеет ${count} друзей (имя скрыто)`);
+          }
+        },
+        error: function() {
+          showResult(`Пользователь с ID ${userId} имеет ${count} друзей (ошибка при получении имени)`);
+        }
+      });
+    }
+
+    // Вывод на экран
+    function showResult(msg) {
+      document.getElementById("results").innerText = msg;
+    }
+  </script>
+</body>
+</html>
